@@ -51,6 +51,9 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("androidx.fragment:fragment-ktx:1.6.2")
 
+    // Inyección de dependencias con Koin
+    implementation("io.insert-koin:koin-android:3.5.0")
+
     // Retrofit para llamadas de red
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
 
