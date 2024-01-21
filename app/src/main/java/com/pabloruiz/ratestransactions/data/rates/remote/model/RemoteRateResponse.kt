@@ -1,4 +1,4 @@
-package com.pabloruiz.ratestransactions.data.rates.remoteService.model
+package com.pabloruiz.ratestransactions.data.rates.remote.model
 
 data class RemoteRateResponse(
     val from: String,
