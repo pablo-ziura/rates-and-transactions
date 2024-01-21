@@ -27,12 +27,18 @@ class MenuViewModel(
     private val _getTransactionsInfoLiveData = MutableLiveData<GetTransactionsInfoState>()
     val getTransactionsInfoLiveData: LiveData<GetTransactionsInfoState> get() = _getTransactionsInfoLiveData
 
+    private var exchangeRatesMatrix: Array<DoubleArray>? = null
+    private var matrixIndices: Map<String, Int>? = null
+
     fun getRatesInfo() {
         _getRatesInfoLiveData.value = ResourceState.Loading()
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val rates = ratesRepository.getRatesInfo()
+                val (matrix, indices) = calculateExchangeRates(rates)
+                exchangeRatesMatrix = matrix
+                matrixIndices = indices
                 withContext(Dispatchers.Main) {
                     _getRatesInfoLiveData.value = ResourceState.Success(rates)
                 }
@@ -44,6 +50,49 @@ class MenuViewModel(
                 )
             }
         }
+    }
+
+    // Using Floyd-Warshall Algorithm
+    private fun calculateExchangeRates(rates: List<Rate>): Pair<Array<DoubleArray>, Map<String, Int>> {
+        val currencies = rates.flatMap { listOf(it.from, it.to) }.toSet()
+        val indices = currencies.withIndex().associate { it.value to it.index }
+        val numCurrencies = currencies.size
+        val matrix = Array(numCurrencies) { DoubleArray(numCurrencies) { Double.MAX_VALUE } }
+
+        for (i in matrix.indices) {
+            matrix[i][i] = 1.0
+        }
+
+        for (rate in rates) {
+            val rateValue = rate.rate.toDoubleOrNull() ?: continue
+            val fromIndex = indices[rate.from]!!
+            val toIndex = indices[rate.to]!!
+            matrix[fromIndex][toIndex] = rateValue
+            matrix[toIndex][fromIndex] = 1 / rateValue
+        }
+
+        for (k in matrix.indices) {
+            for (i in matrix.indices) {
+                for (j in matrix.indices) {
+                    if (matrix[i][j] > matrix[i][k] * matrix[k][j]) {
+                        matrix[i][j] = matrix[i][k] * matrix[k][j]
+                    }
+                }
+            }
+        }
+        return Pair(matrix, indices)
+    }
+
+    fun convertCurrency(amount: Double, fromCurrency: String, toCurrency: String): Double {
+        val fromIndex = matrixIndices?.get(fromCurrency)
+        val toIndex = matrixIndices?.get(toCurrency)
+        if (fromIndex != null && toIndex != null) {
+            val rate = exchangeRatesMatrix?.get(fromIndex)?.get(toIndex)
+            if (rate != null && rate != Double.MAX_VALUE) {
+                return amount * rate
+            }
+        }
+        return 0.0
     }
 
     fun getTransactionsInfo() {

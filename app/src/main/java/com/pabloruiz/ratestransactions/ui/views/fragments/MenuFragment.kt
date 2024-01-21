@@ -53,6 +53,7 @@ class MenuFragment : Fragment() {
             is ResourceState.Success -> {
                 hideLoading()
                 populateCurrencySpinner(state.result)
+                convertAndDisplayCurrency(12.0, "CAD", "USD")
             }
 
             is ResourceState.Error -> {
@@ -62,6 +63,15 @@ class MenuFragment : Fragment() {
 
             is ResourceState.None -> hideLoading()
         }
+    }
+
+    private fun convertAndDisplayCurrency(
+        amount: Double,
+        fromCurrency: String,
+        toCurrency: String
+    ) {
+        val convertedAmount = menuViewModel.convertCurrency(amount, fromCurrency, toCurrency)
+        println("Converted: $amount $fromCurrency to $convertedAmount $toCurrency")
     }
 
     private fun handleGetTransactionsInfoState(state: GetTransactionsInfoState) {
