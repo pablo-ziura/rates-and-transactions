@@ -9,16 +9,20 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.pabloruiz.ratestransactions.databinding.FragmentMenuBinding
 import com.pabloruiz.ratestransactions.model.Rate
 import com.pabloruiz.ratestransactions.model.Transaction
 import com.pabloruiz.ratestransactions.ui.model.ResourceState
+import com.pabloruiz.ratestransactions.ui.views.fragments.adapters.TransactionsListAdapter
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MenuFragment : Fragment() {
 
     private var _binding: FragmentMenuBinding? = null
     private val binding get() = _binding!!
+
+    private val transactionListAdapter = TransactionsListAdapter()
 
     private val menuViewModel: MenuViewModel by viewModel()
 
@@ -80,6 +84,8 @@ class MenuFragment : Fragment() {
             is ResourceState.Success -> {
                 hideLoading()
                 populateProductSpinner(state.result)
+                transactionListAdapter.submitList(state.result)
+                initRecyclerView()
             }
 
             is ResourceState.Error -> {
@@ -123,6 +129,11 @@ class MenuFragment : Fragment() {
 
     private fun showError(errorMessage: String) {
         Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
+    }
+
+    private fun initRecyclerView() {
+        binding.rvTransactionsList.adapter = transactionListAdapter
+        binding.rvTransactionsList.layoutManager = LinearLayoutManager(requireContext())
     }
 
     override fun onDestroyView() {
