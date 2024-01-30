@@ -2,10 +2,12 @@ package com.pabloruiz.ratestransactions.ui.views.fragments
 
 //noinspection SuspiciousImport
 import android.R
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -22,7 +24,7 @@ class MenuFragment : Fragment() {
     private var _binding: FragmentMenuBinding? = null
     private val binding get() = _binding!!
 
-    private val transactionListAdapter = TransactionsListAdapter()
+    private lateinit var transactionListAdapter: TransactionsListAdapter
 
     private val menuViewModel: MenuViewModel by viewModel()
 
@@ -30,12 +32,14 @@ class MenuFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         _binding = FragmentMenuBinding.inflate(inflater, container, false)
+        transactionListAdapter = TransactionsListAdapter(menuViewModel)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         initViewModel()
+        initRecyclerView()
     }
 
     private fun initViewModel() {
@@ -57,7 +61,6 @@ class MenuFragment : Fragment() {
             is ResourceState.Success -> {
                 hideLoading()
                 populateCurrencySpinner(state.result)
-                convertAndDisplayCurrency(12.0, "CAD", "USD")
             }
 
             is ResourceState.Error -> {
@@ -69,15 +72,6 @@ class MenuFragment : Fragment() {
         }
     }
 
-    private fun convertAndDisplayCurrency(
-        amount: Double,
-        fromCurrency: String,
-        toCurrency: String
-    ) {
-        val convertedAmount = menuViewModel.convertCurrency(amount, fromCurrency, toCurrency)
-        println("Converted: $amount $fromCurrency to $convertedAmount $toCurrency")
-    }
-
     private fun handleGetTransactionsInfoState(state: GetTransactionsInfoState) {
         when (state) {
             is ResourceState.Loading -> showLoading()
@@ -85,7 +79,6 @@ class MenuFragment : Fragment() {
                 hideLoading()
                 populateProductSpinner(state.result)
                 transactionListAdapter.submitList(state.result)
-                initRecyclerView()
             }
 
             is ResourceState.Error -> {
@@ -114,17 +107,19 @@ class MenuFragment : Fragment() {
         )
         adapter.setDropDownViewResource(R.layout.simple_spinner_dropdown_item)
         binding.spinnerCurrency.adapter = adapter
+        setupCurrencySpinnerListener()
     }
 
     private fun populateProductSpinner(listOfTransactions: List<Transaction>) {
-        val rates = listOfTransactions.map { it.sku }.toSet().toList()
+        val products = listOfTransactions.map { it.sku }.toSet().toList()
         val adapter = ArrayAdapter(
             requireContext(),
             R.layout.simple_spinner_item,
-            rates
+            products
         )
         adapter.setDropDownViewResource(R.layout.simple_spinner_dropdown_item)
         binding.spinnerProduct.adapter = adapter
+        setupProductSpinnerListener(listOfTransactions)
     }
 
     private fun showError(errorMessage: String) {
@@ -132,8 +127,51 @@ class MenuFragment : Fragment() {
     }
 
     private fun initRecyclerView() {
-        binding.rvTransactionsList.adapter = transactionListAdapter
         binding.rvTransactionsList.layoutManager = LinearLayoutManager(requireContext())
+        binding.rvTransactionsList.adapter = transactionListAdapter
+    }
+
+    private fun setupCurrencySpinnerListener() {
+        binding.spinnerCurrency.onItemSelectedListener =
+            object : AdapterView.OnItemSelectedListener {
+                @SuppressLint("NotifyDataSetChanged")
+                override fun onItemSelected(
+                    parent: AdapterView<*>,
+                    view: View,
+                    position: Int,
+                    id: Long
+                ) {
+                    val selectedCurrency = parent.getItemAtPosition(position) as String
+                    menuViewModel.selectedCurrency = selectedCurrency
+                    transactionListAdapter.notifyDataSetChanged()
+                }
+
+                override fun onNothingSelected(parent: AdapterView<*>) {
+                    // Opcional: manejar la no selección
+                }
+            }
+    }
+
+    private fun setupProductSpinnerListener(listOfTransactions: List<Transaction>) {
+        binding.spinnerProduct.onItemSelectedListener =
+            object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    parent: AdapterView<*>,
+                    view: View,
+                    position: Int,
+                    id: Long
+                ) {
+                    val selectedProduct = parent.getItemAtPosition(position) as String
+                    menuViewModel.selectedProduct = selectedProduct
+                    val filteredTransactions =
+                        menuViewModel.filterTransactionsByProduct(listOfTransactions)
+                    transactionListAdapter.submitList(filteredTransactions)
+                }
+
+                override fun onNothingSelected(parent: AdapterView<*>) {
+                    // Opcional: manejar la no selección
+                }
+            }
     }
 
     override fun onDestroyView() {

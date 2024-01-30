@@ -21,6 +21,9 @@ class MenuViewModel(
     private val transactionsRepository: TransactionsRepository
 ) : ViewModel() {
 
+    var selectedCurrency: String? = null
+    var selectedProduct: String? = null
+
     private val _getRatesInfoLiveData = MutableLiveData<GetRatesInfoState>()
     val getRatesInfoLiveData: LiveData<GetRatesInfoState> get() = _getRatesInfoLiveData
 
@@ -83,15 +86,19 @@ class MenuViewModel(
         return Pair(matrix, indices)
     }
 
-    fun convertCurrency(amount: Double, fromCurrency: String, toCurrency: String): Double {
+    fun convertCurrency(amountStr: String, fromCurrency: String, toCurrency: String): Double {
+        val amount = amountStr.toDoubleOrNull() ?: return 0.0
+
         val fromIndex = matrixIndices?.get(fromCurrency)
         val toIndex = matrixIndices?.get(toCurrency)
+
         if (fromIndex != null && toIndex != null) {
             val rate = exchangeRatesMatrix?.get(fromIndex)?.get(toIndex)
             if (rate != null && rate != Double.MAX_VALUE) {
                 return amount * rate
             }
         }
+
         return 0.0
     }
 
@@ -113,4 +120,9 @@ class MenuViewModel(
             }
         }
     }
+
+    fun filterTransactionsByProduct(transactions: List<Transaction>): List<Transaction> {
+        return transactions.filter { it.sku == selectedProduct }
+    }
+
 }

@@ -1,5 +1,4 @@
 <resources>
     <string name="app_name">Rates And Transactions</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="transaction_info">"%1$s - %2$.2f %3$s -> %4$.2f %5$s"</string>
 </resources>
